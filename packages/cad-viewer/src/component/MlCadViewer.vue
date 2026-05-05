@@ -84,12 +84,13 @@
 import {
   AcApDocManager,
   AcApOpenDatabaseOptions,
+  AcApQNewCmd,
   AcEdOpenMode,
   eventBus
 } from '@mlightcad/cad-simple-viewer'
 import { log } from '@mlightcad/data-model'
 import { ElMessage } from 'element-plus'
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onActivated, onDeactivated, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import { initializeCadViewer, store } from '../app'
@@ -396,8 +397,30 @@ watch(
   }
 )
 
+// Keep html.dark class only while this viewer is active so it does not leak to other routes
+let isDomActive = false
+const syncHtmlDark = () => {
+  if (typeof document === 'undefined') return
+  document.documentElement.classList.toggle('dark', isDomActive && isDark.value)
+}
+
+watch(isDark, syncHtmlDark)
+
+onActivated(() => {
+  isDomActive = true
+  syncHtmlDark()
+})
+
+onDeactivated(() => {
+  isDomActive = false
+  syncHtmlDark()
+})
+
 // Component lifecycle: Initialize and load initial file if URL or localFile is provided
 onMounted(async () => {
+  isDomActive = true
+  syncHtmlDark()
+
   if (props.url || props.localFile) {
     beginDocumentOpening()
     beginPendingOpen(props.mode)
@@ -428,6 +451,10 @@ onMounted(async () => {
   // If localFile prop is provided, automatically load the file on mount
   else if (props.localFile) {
     openLocalFile(props.localFile)
+  } else {
+    // Default to new drawing when no file is provided
+    const cmd = new AcApQNewCmd()
+    cmd.trigger(AcApDocManager.instance.context)
   }
 
   // Apply initial background color if provided
@@ -444,6 +471,9 @@ onMounted(async () => {
 
 // Destroy the CAD viewer when the component is unmounted
 onUnmounted(() => {
+  isDomActive = false
+  syncHtmlDark()
+
   // Notify consumers first
   emit('destroy')
 

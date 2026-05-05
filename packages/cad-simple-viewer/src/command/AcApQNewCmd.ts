@@ -1,5 +1,6 @@
-import { AcApContext, AcApDocManager } from '../app'
+import { AcApContext, AcApDocManager, AcApOpenDatabaseOptions } from '../app'
 import { AcEdCommand } from '../editor'
+import { AcEdOpenMode } from '../editor/view'
 
 /**
  * Command for creating a new CAD document from a template.
@@ -30,6 +31,9 @@ export class AcApQNewCmd extends AcEdCommand {
    */
   async execute(_context: AcApContext) {
     const baseUrl = AcApDocManager.instance.baseUrl
-    AcApDocManager.instance.openUrl(baseUrl + 'templates/acadiso.dxf')
+    const options: AcApOpenDatabaseOptions = {
+      mode: AcEdOpenMode.Write
+    }
+    await AcApDocManager.instance.openUrl(baseUrl + 'templates/acadiso.dxf', options)
   }
 }
